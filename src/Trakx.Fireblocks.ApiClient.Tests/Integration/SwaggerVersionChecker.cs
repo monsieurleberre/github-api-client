@@ -1,0 +1,50 @@
+﻿using System.Text.RegularExpressions;
+using FluentAssertions;
+using Flurl.Http;
+using Trakx.Utils.Extensions;
+using Xunit;
+
+namespace Trakx.Fireblocks.ApiClient.Tests.Integration;
+
+public class SwaggerVersionChecker : IDisposable
+{
+    private readonly IFlurlClient _fireblocksClient;
+
+    public SwaggerVersionChecker()
+    {
+        _fireblocksClient = new FlurlClient("https://docs.fireblocks.com");
+    }
+
+    [Fact(Skip = "local openapi file was changed to improve methods signature and fix nullable issues. After that, this test is no longer working, as it takes the assumption that both files, local and remote, are identical.")]
+    //[Fact]
+    public async Task VerifyOpenApiVersion()
+    {
+        var apiResponse = await _fireblocksClient.Request("api", "v1", "swagger").SendAsync(HttpMethod.Get);
+        var fireblocksOpenApi = await apiResponse.GetStringAsync();
+        var modifiedOpenApi = GetCurrentOpenApi();
+
+        var fireblocksRawOpenApi = Regex.Replace(fireblocksOpenApi, @"\s+", string.Empty);
+        var unmodifiedOpenAPi = Regex.Replace(modifiedOpenApi, @"tags\: \[[A-Za-z]{2,}\](\r?\n)", string.Empty);
+        unmodifiedOpenAPi = Regex.Replace(unmodifiedOpenAPi, @"operationId\: [A-Za-z]{2,}(\r?\n)", string.Empty);
+        var currentRawOpenApi = Regex.Replace(unmodifiedOpenAPi, @"\s+", string.Empty);
+        currentRawOpenApi = Regex.Replace(currentRawOpenApi, "-FTX", string.Empty);
+
+        fireblocksRawOpenApi.Should().Be(currentRawOpenApi);
+    }
+
+
+    private static string GetCurrentOpenApi()
+    {
+        var isRootDirectory = DirectoryInfoExtensions.TryWalkBackToRepositoryRoot(null, out var rootDirectory);
+        if (!isRootDirectory || rootDirectory == null)
+            return "";
+
+        var openApiPath = Path.Combine(rootDirectory.ToString(), "src", "Trakx.Fireblocks.ApiClient", "openApi3.yaml");
+        return File.ReadAllText(openApiPath);
+    }
+
+    public void Dispose()
+    {
+        _fireblocksClient.Dispose();
+    }
+}

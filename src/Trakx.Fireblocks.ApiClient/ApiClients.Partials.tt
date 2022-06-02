@@ -1,0 +1,28 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ output extension=".cs" #>
+#pragma warning disable S1172, IDE0060 // Unused method parameters should be removed
+
+namespace Trakx.Fireblocks.ApiClient
+{
+<# 
+var clientNames = new [] { "Vault", "InternalWallets", "ExternalWallets", 
+    "ExchangeAccounts", "FiatAccounts", "Transactions", "SupportedAssets", 
+    "NetworkConnections", "TransferTickets", "Fee", "Webhooks", "Users",
+    "OffExchangeAccounts" };
+
+foreach(var name in clientNames)
+{
+#>
+    internal partial class <#= name #>Client
+    {
+        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url)
+        {
+            CredentialProvider.AddCredentials(request);
+        }
+    }
+<#
+}
+#>
+
+}
